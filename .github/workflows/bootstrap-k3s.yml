@@ -1,0 +1,64 @@
+name: Bootstrap K3s
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_reinstall:
+        description: "Forzar reinstalacion de K3s"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      calico_version:
+        description: "Version de Calico (ej: v3.27.2)"
+        required: false
+        default: "v3.27.2"
+        type: string
+  workflow_call:
+    inputs:
+      force_reinstall:
+        required: false
+        type: string
+        default: "false"
+      calico_version:
+        required: false
+        type: string
+        default: "v3.27.2"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bootstrap-k3s-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap-k3s:
+    name: Bootstrap K3s (self-hosted)
+    runs-on: [self-hosted, linux]
+    # Ejecuta siempre en workflow_dispatch.
+    # Si se invoca por workflow_call, requiere habilitar el flag de entorno/repo variable.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.ENABLE_K3S_BOOTSTRAP == 'true' }}
+    env:
+      FORCE_REINSTALL: ${{ inputs.force_reinstall || 'false' }}
+      CALICO_VERSION: ${{ inputs.calico_version || 'v3.27.2' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Mostrar contexto de ejecucion
+        run: |
+          echo "Runner: $RUNNER_NAME"
+          echo "User: $(whoami)"
+          echo "FORCE_REINSTALL=${FORCE_REINSTALL}"
+          echo "CALICO_VERSION=${CALICO_VERSION}"
+          echo "ENABLE_K3S_BOOTSTRAP=${{ vars.ENABLE_K3S_BOOTSTRAP || 'unset' }}"
+
+      - name: Dar permisos al script
+        run: chmod +x bootstrap/install_k3s.sh
+
+      - name: Ejecutar bootstrap K3s
+        run: ./bootstrap/install_k3s.sh
