@@ -1,0 +1,106 @@
+name: Bootstrap Argo CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      argocd_namespace:
+        description: "Namespace destino para Argo CD"
+        required: false
+        default: "argocd"
+        type: string
+      argocd_release_name:
+        description: "Nombre del release Helm"
+        required: false
+        default: "argocd"
+        type: string
+      argocd_chart_version:
+        description: "Version del chart (opcional)"
+        required: false
+        default: ""
+        type: string
+      values_file:
+        description: "Ruta al values file"
+        required: false
+        default: "bootstrap/values/argocd-values.yaml"
+        type: string
+  workflow_call:
+    inputs:
+      argocd_namespace:
+        required: false
+        type: string
+        default: "argocd"
+      argocd_release_name:
+        required: false
+        type: string
+        default: "argocd"
+      argocd_chart_version:
+        required: false
+        type: string
+        default: ""
+      values_file:
+        required: false
+        type: string
+        default: "bootstrap/values/argocd-values.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bootstrap-argocd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap-argocd:
+    name: Bootstrap Argo CD (self-hosted)
+    runs-on: [self-hosted, linux]
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.ENABLE_ARGOCD_BOOTSTRAP == 'true' }}
+    env:
+      ARGOCD_NAMESPACE: ${{ inputs.argocd_namespace || 'argocd' }}
+      ARGOCD_RELEASE_NAME: ${{ inputs.argocd_release_name || 'argocd' }}
+      ARGOCD_CHART_VERSION: ${{ inputs.argocd_chart_version || '' }}
+      VALUES_FILE: ${{ github.workspace }}/${{ inputs.values_file || 'bootstrap/values/argocd-values.yaml' }}
+      # Si no se define, el script intenta /etc/rancher/k3s/k3s.yaml
+      KUBECONFIG: ${{ vars.KUBECONFIG_PATH || '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verificar prerequisitos del runner
+        run: |
+          set -euo pipefail
+          echo "Runner: $RUNNER_NAME"
+          echo "User: $(whoami)"
+
+          command -v bash >/dev/null 2>&1 || { echo "[ERROR] bash no esta instalado"; exit 1; }
+          command -v curl >/dev/null 2>&1 || { echo "[ERROR] curl no esta instalado"; exit 1; }
+          command -v kubectl >/dev/null 2>&1 || { echo "[ERROR] kubectl no esta instalado"; exit 1; }
+
+          if command -v helm >/dev/null 2>&1; then
+            echo "[INFO] Helm encontrado: $(helm version --short)"
+          else
+            echo "[INFO] Helm no esta presente. El script lo instalara de forma idempotente"
+          fi
+
+      - name: Verificar ficheros requeridos
+        run: |
+          set -euo pipefail
+          test -f bootstrap/deploy_argocd.sh || { echo "[ERROR] No existe bootstrap/deploy_argocd.sh"; exit 1; }
+          test -f "$VALUES_FILE" || { echo "[ERROR] No existe values file: $VALUES_FILE"; exit 1; }
+          bash -n bootstrap/deploy_argocd.sh
+
+      - name: Verificar conectividad con cluster
+        run: |
+          set -euo pipefail
+          if [ -n "${KUBECONFIG:-}" ] && [ -f "$KUBECONFIG" ]; then
+            echo "[INFO] Usando KUBECONFIG=${KUBECONFIG}"
+          else
+            echo "[INFO] KUBECONFIG variable no valida o no definida; se intentara default de k3s en el script"
+          fi
+          kubectl get nodes -o wide
+
+      - name: Dar permisos al script
+        run: chmod +x bootstrap/deploy_argocd.sh
+
+      - name: Ejecutar bootstrap de Argo CD
+        run: ./bootstrap/deploy_argocd.sh

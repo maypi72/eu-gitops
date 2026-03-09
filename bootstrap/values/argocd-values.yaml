@@ -1,0 +1,32 @@
+# Valores orientados a laboratorio en K3s.
+# Se prioriza simplicidad y bajo consumo de recursos.
+
+global:
+  domain: argocd.local
+
+configs:
+  params:
+    server.insecure: true
+
+dex:
+  enabled: false
+
+redis:
+  enabled: true
+
+controller:
+  replicas: 1
+
+server:
+  replicas: 1
+  service:
+    type: NodePort
+
+repoServer:
+  replicas: 1
+
+applicationSet:
+  replicas: 1
+
+notifications:
+  enabled: false
