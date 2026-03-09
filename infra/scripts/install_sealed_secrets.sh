@@ -13,12 +13,30 @@ export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 
 SEALED_SECRETS_NAMESPACE="${SEALED_SECRETS_NAMESPACE:-kube-system}"
 SEALED_SECRETS_RELEASE_NAME="${SEALED_SECRETS_RELEASE_NAME:-sealed-secrets}"
-SEALED_SECRETS_HELM_REPO_NAME="${SEALED_SECRETS_HELM_REPO_NAME:-bitnami}"
-SEALED_SECRETS_HELM_REPO_URL="${SEALED_SECRETS_HELM_REPO_URL:-https://charts.bitnami.com/bitnami}"
-SEALED_SECRETS_CHART="${SEALED_SECRETS_CHART:-bitnami/sealed-secrets}"
+SEALED_SECRETS_HELM_REPO_NAME="${SEALED_SECRETS_HELM_REPO_NAME:-sealed-secrets}"
+SEALED_SECRETS_HELM_REPO_URL="${SEALED_SECRETS_HELM_REPO_URL:-https://bitnami-labs.github.io/sealed-secrets}"
+SEALED_SECRETS_CHART="${SEALED_SECRETS_CHART:-sealed-secrets/sealed-secrets}"
+SEALED_SECRETS_CHART_VERSION="${SEALED_SECRETS_CHART_VERSION:-}"
 
 gh_group() { [ -n "${GITHUB_ACTIONS:-}" ] && echo "::group::$*" || echo "[INFO] $*"; }
 gh_group_end() { [ -n "${GITHUB_ACTIONS:-}" ] && echo "::endgroup::" || echo ""; }
+
+retry() {
+    local attempts="$1"
+    local delay="$2"
+    shift 2
+    local n=1
+
+    until "$@"; do
+        if [ "$n" -ge "$attempts" ]; then
+            echo "[ERROR] Comando fallo tras ${attempts} intentos: $*"
+            return 1
+        fi
+        echo "[WARN] Intento ${n}/${attempts} fallido. Reintentando en ${delay}s..."
+        sleep "$delay"
+        n=$((n + 1))
+    done
+}
 
 gh_group "Pre-chequeos"
 
@@ -69,14 +87,22 @@ gh_group "Instalacion Sealed Secrets"
 
 kubectl create namespace "$SEALED_SECRETS_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
-helm repo add "$SEALED_SECRETS_HELM_REPO_NAME" "$SEALED_SECRETS_HELM_REPO_URL" --force-update
-helm repo update "$SEALED_SECRETS_HELM_REPO_NAME"
+retry 3 10 helm repo add "$SEALED_SECRETS_HELM_REPO_NAME" "$SEALED_SECRETS_HELM_REPO_URL" --force-update
+retry 3 10 helm repo update "$SEALED_SECRETS_HELM_REPO_NAME"
 
-helm upgrade --install "$SEALED_SECRETS_RELEASE_NAME" "$SEALED_SECRETS_CHART" \
-  --namespace "$SEALED_SECRETS_NAMESPACE" \
-    -f "$VALUES_FILE" \
-  --wait \
-  --timeout 300s
+HELM_ARGS=(
+    upgrade --install "$SEALED_SECRETS_RELEASE_NAME" "$SEALED_SECRETS_CHART"
+    --namespace "$SEALED_SECRETS_NAMESPACE"
+    -f "$VALUES_FILE"
+    --wait
+    --timeout 300s
+)
+
+if [ -n "$SEALED_SECRETS_CHART_VERSION" ]; then
+    HELM_ARGS+=(--version "$SEALED_SECRETS_CHART_VERSION")
+fi
+
+retry 3 15 helm "${HELM_ARGS[@]}"
 
 gh_group_end
 
