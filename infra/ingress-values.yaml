@@ -1,0 +1,15 @@
+# Configuración optimizada para K3s en Laboratorio
+controller:
+  kind: DaemonSet
+  # Evita bind directo a puertos del host (80/443) para no colisionar con otros servicios
+  hostNetwork: false
+  dnsPolicy: ClusterFirst
+  service:
+    type: ClusterIP
+  admissionWebhooks:
+    enabled: false
+  # Recursos recomendados para evitar que consuma mucho en la VM
+  resources:
+    requests:
+      cpu: 100m
+      memory: 90Mi

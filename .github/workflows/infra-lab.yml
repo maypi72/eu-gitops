@@ -1,0 +1,128 @@
+name: Infra Lab (K3s -> Ingress -> Argo CD)
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_reinstall_k3s:
+        description: "Forzar reinstalacion de K3s"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      calico_version:
+        description: "Version de Calico"
+        required: false
+        default: "v3.27.2"
+        type: string
+      ingress_namespace:
+        description: "Namespace destino de NGINX Ingress"
+        required: false
+        default: "ingress-nginx"
+        type: string
+      ingress_release_name:
+        description: "Nombre release Helm de NGINX Ingress"
+        required: false
+        default: "ingress-nginx"
+        type: string
+      ingress_chart_version:
+        description: "Version del chart ingress-nginx/ingress-nginx"
+        required: false
+        default: "4.10.1"
+        type: string
+      ingress_values_file:
+        description: "Ruta de values de NGINX Ingress"
+        required: false
+        default: "infra/ingress-values.yaml"
+        type: string
+      argocd_namespace:
+        description: "Namespace destino de Argo CD"
+        required: false
+        default: "argocd"
+        type: string
+      argocd_release_name:
+        description: "Nombre release Helm de Argo CD"
+        required: false
+        default: "argocd"
+        type: string
+      argocd_chart_version:
+        description: "Version del chart argo/argo-cd"
+        required: false
+        default: "7.8.2"
+        type: string
+      argocd_values_file:
+        description: "Ruta de values de Argo CD"
+        required: false
+        default: "infra/values/argocd-values.yaml"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  infra-k3s:
+    name: 1) Infra K3s
+    uses: ./.github/workflows/infra-k3s.yml
+    with:
+      force_reinstall: ${{ inputs.force_reinstall_k3s }}
+      calico_version: ${{ inputs.calico_version }}
+
+  infra-lab:
+    name: 2) Infra Lab - Ingress
+    needs: infra-k3s
+    runs-on: [self-hosted, linux]
+    env:
+      INGRESS_NAMESPACE: ${{ inputs.ingress_namespace || 'ingress-nginx' }}
+      RELEASE_NAME: ${{ inputs.ingress_release_name || 'ingress-nginx' }}
+      INGRESS_CHART_VERSION: ${{ inputs.ingress_chart_version || '4.10.1' }}
+      VALUES_FILE: ${{ github.workspace }}/${{ inputs.ingress_values_file || 'infra/ingress-values.yaml' }}
+      KUBECONFIG: ${{ vars.KUBECONFIG_PATH || '/etc/rancher/k3s/k3s.yaml' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verificar prerequisitos del runner
+        run: |
+          set -euo pipefail
+          echo "Runner: $RUNNER_NAME"
+          echo "User: $(whoami)"
+          command -v bash >/dev/null 2>&1 || { echo "[ERROR] bash no esta instalado"; exit 1; }
+          command -v kubectl >/dev/null 2>&1 || { echo "[ERROR] kubectl no esta instalado"; exit 1; }
+          command -v helm >/dev/null 2>&1 || { echo "[ERROR] helm no esta instalado"; exit 1; }
+          command -v curl >/dev/null 2>&1 || { echo "[ERROR] curl no esta instalado"; exit 1; }
+          helm version --short
+
+      - name: Verificar ficheros requeridos
+        run: |
+          set -euo pipefail
+          test -f infra/deploy_ingress.sh || { echo "[ERROR] No existe infra/deploy_ingress.sh"; exit 1; }
+          test -f "$VALUES_FILE" || { echo "[ERROR] No existe values file: $VALUES_FILE"; exit 1; }
+          bash -n infra/deploy_ingress.sh
+
+      - name: Verificar conectividad con cluster
+        run: |
+          set -euo pipefail
+          if [ -n "${KUBECONFIG:-}" ] && [ -f "$KUBECONFIG" ]; then
+            echo "[INFO] Usando KUBECONFIG=${KUBECONFIG}"
+          else
+            echo "[WARN] KUBECONFIG no definido o no existe: ${KUBECONFIG:-unset}"
+          fi
+          kubectl get nodes -o wide
+
+      - name: Dar permisos al script
+        run: chmod +x infra/deploy_ingress.sh
+
+      - name: Desplegar NGINX Ingress con Helm
+        run: ./infra/deploy_ingress.sh
+
+  infra-argocd:
+    name: 3) Infra Argo CD
+    needs: infra-lab
+    uses: ./.github/workflows/infra-argocd.yml
+    with:
+      argocd_namespace: ${{ inputs.argocd_namespace }}
+      argocd_release_name: ${{ inputs.argocd_release_name }}
+      argocd_chart_version: ${{ inputs.argocd_chart_version }}
+      values_file: ${{ inputs.argocd_values_file }}

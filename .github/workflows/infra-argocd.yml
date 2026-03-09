@@ -1,4 +1,4 @@
-name: Bootstrap Argo CD
+name: Infra Argo CD
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ on:
       values_file:
         description: "Ruta al values file"
         required: false
-        default: "bootstrap/values/argocd-values.yaml"
+        default: "infra/values/argocd-values.yaml"
         type: string
   workflow_call:
     inputs:
@@ -40,25 +40,25 @@ on:
       values_file:
         required: false
         type: string
-        default: "bootstrap/values/argocd-values.yaml"
+        default: "infra/values/argocd-values.yaml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: bootstrap-argocd-${{ github.ref }}
+  group: infra-argocd-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  bootstrap-argocd:
-    name: Bootstrap Argo CD (self-hosted)
+  infra-argocd:
+    name: Infra Argo CD (self-hosted)
     runs-on: [self-hosted, linux]
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || vars.ENABLE_ARGOCD_BOOTSTRAP == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || vars.ENABLE_ARGOCD_INFRA == 'true' }}
     env:
       ARGOCD_NAMESPACE: ${{ inputs.argocd_namespace || 'argocd' }}
       ARGOCD_RELEASE_NAME: ${{ inputs.argocd_release_name || 'argocd' }}
       ARGOCD_CHART_VERSION: ${{ inputs.argocd_chart_version || '7.8.2' }}
-      VALUES_FILE: ${{ github.workspace }}/${{ inputs.values_file || 'bootstrap/values/argocd-values.yaml' }}
+      VALUES_FILE: ${{ github.workspace }}/${{ inputs.values_file || 'infra/values/argocd-values.yaml' }}
       # Si no se define, el script intenta /etc/rancher/k3s/k3s.yaml
       KUBECONFIG: ${{ vars.KUBECONFIG_PATH || '' }}
 
@@ -85,9 +85,9 @@ jobs:
       - name: Verificar ficheros requeridos
         run: |
           set -euo pipefail
-          test -f bootstrap/deploy_argocd.sh || { echo "[ERROR] No existe bootstrap/deploy_argocd.sh"; exit 1; }
+          test -f infra/deploy_argocd.sh || { echo "[ERROR] No existe infra/deploy_argocd.sh"; exit 1; }
           test -f "$VALUES_FILE" || { echo "[ERROR] No existe values file: $VALUES_FILE"; exit 1; }
-          bash -n bootstrap/deploy_argocd.sh
+          bash -n infra/deploy_argocd.sh
 
       - name: Verificar conectividad con cluster
         run: |
@@ -100,7 +100,7 @@ jobs:
           kubectl get nodes -o wide
 
       - name: Dar permisos al script
-        run: chmod +x bootstrap/deploy_argocd.sh
+        run: chmod +x infra/deploy_argocd.sh
 
-      - name: Ejecutar bootstrap de Argo CD
-        run: ./bootstrap/deploy_argocd.sh
+      - name: Ejecutar despliegue de Argo CD
+        run: ./infra/deploy_argocd.sh

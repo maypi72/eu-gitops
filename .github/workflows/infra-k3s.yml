@@ -1,4 +1,4 @@
-name: Bootstrap K3s
+name: Infra K3s
 
 on:
   workflow_dispatch:
@@ -31,16 +31,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: bootstrap-k3s-${{ github.ref }}
+  group: infra-k3s-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  bootstrap-k3s:
-    name: Bootstrap K3s (self-hosted)
+  infra-k3s:
+    name: Infra K3s (self-hosted)
     runs-on: [self-hosted, linux]
     # Ejecuta siempre en workflow_dispatch.
     # Si se invoca por workflow_call, requiere habilitar el flag de entorno/repo variable.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || vars.ENABLE_K3S_BOOTSTRAP == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || vars.ENABLE_K3S_INFRA == 'true' }}
     env:
       FORCE_REINSTALL: ${{ inputs.force_reinstall || 'false' }}
       CALICO_VERSION: ${{ inputs.calico_version || 'v3.27.2' }}
@@ -55,10 +55,10 @@ jobs:
           echo "User: $(whoami)"
           echo "FORCE_REINSTALL=${FORCE_REINSTALL}"
           echo "CALICO_VERSION=${CALICO_VERSION}"
-          echo "ENABLE_K3S_BOOTSTRAP=${{ vars.ENABLE_K3S_BOOTSTRAP || 'unset' }}"
+          echo "ENABLE_K3S_INFRA=${{ vars.ENABLE_K3S_INFRA || 'unset' }}"
 
       - name: Dar permisos al script
-        run: chmod +x bootstrap/install_k3s.sh
+        run: chmod +x infra/install_k3s.sh
 
-      - name: Ejecutar bootstrap K3s
-        run: ./bootstrap/install_k3s.sh
+      - name: Ejecutar despliegue de K3s
+        run: ./infra/install_k3s.sh

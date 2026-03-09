@@ -35,7 +35,7 @@ ARGOCD_RELEASE_NAME="${ARGOCD_RELEASE_NAME:-argocd}"
 ARGOCD_WAIT_TIMEOUT="${ARGOCD_WAIT_TIMEOUT:-10m}"
 ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-}"
 
-echo "[INFO] Bootstrap de Argo CD para laboratorio K3s"
+echo "[INFO] Despliegue de Infra Argo CD para laboratorio K3s"
 
 if [ ! -f "$VALUES_FILE" ]; then
   echo "[ERROR] No existe el values file: $VALUES_FILE"
@@ -144,7 +144,7 @@ kubectl -n "$ARGOCD_NAMESPACE" get pods -o wide
 kubectl -n "$ARGOCD_NAMESPACE" rollout status deployment/argocd-server --timeout=300s || true
 kubectl -n "$ARGOCD_NAMESPACE" rollout status statefulset/argocd-application-controller --timeout=300s || true
 
-echo "[INFO] Bootstrap de Argo CD finalizado"
+echo "[INFO] Despliegue de Infra Argo CD finalizado"
 echo "[INFO] Admin password (si existe):"
 kubectl -n "$ARGOCD_NAMESPACE" get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || true
 echo ""
