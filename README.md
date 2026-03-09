@@ -12,14 +12,20 @@ Repositorio GitOps para laboratorio K3s con despliegue de infraestructura base e
 │   └── infra-argocd.yml
 ├── apps/
 └── infra/
-		├── apps-root.yaml
-		├── ingress-values.yaml
-		├── values/
-		│   └── argocd-values.yaml
-		└── scripts/
-				├── install_k3s.sh
-				├── deploy_ingress.sh
-				└── deploy_argocd.sh
+	├── apps-root.yaml
+	├── ingress-values.yaml
+	├── values/
+	│   ├── argocd-values.yaml
+	│   ├── cert-manager-values.yaml
+	│   ├── sealed-secrets-values.yaml
+	│   └── trivy-values.yaml
+	└── scripts/
+		├── install_k3s.sh
+		├── deploy_ingress.sh
+		├── install_cert_manager.sh
+		├── install_sealed_secrets.sh
+		├── install_trivy.sh
+		└── deploy_argocd.sh
 ```
 
 ## Workflows
@@ -27,8 +33,11 @@ Repositorio GitOps para laboratorio K3s con despliegue de infraestructura base e
 - `infra-k3s.yml`: instala/prepara K3s (incluyendo prerequisitos del clúster para el lab).
 - `infra-lab.yml`: orquesta el flujo principal en este orden:
 	1. K3s
-	2. Lab (despliegue de Ingress con Helm y comprobaciones)
-	3. Argo CD
+	2. Ingress NGINX
+	3. cert-manager
+	4. Sealed Secrets
+	5. Trivy Operator
+	6. Argo CD
 - `infra-argocd.yml`: despliegue reutilizable de Argo CD con Helm.
 
 ## Rutas Importantes
@@ -36,19 +45,30 @@ Repositorio GitOps para laboratorio K3s con despliegue de infraestructura base e
 - Scripts:
 	- `infra/scripts/install_k3s.sh`
 	- `infra/scripts/deploy_ingress.sh`
+	- `infra/scripts/install_cert_manager.sh`
+	- `infra/scripts/install_sealed_secrets.sh`
+	- `infra/scripts/install_trivy.sh`
 	- `infra/scripts/deploy_argocd.sh`
 - Values:
 	- `infra/ingress-values.yaml`
 	- `infra/values/argocd-values.yaml`
+	- `infra/values/cert-manager-values.yaml`
+	- `infra/values/sealed-secrets-values.yaml`
+	- `infra/values/trivy-values.yaml`
 
 Los scripts resuelven sus values por defecto en estas rutas:
 
 - `infra/scripts/deploy_ingress.sh` -> `../ingress-values.yaml`
+- `infra/scripts/install_cert_manager.sh` -> `../values/cert-manager-values.yaml`
+- `infra/scripts/install_sealed_secrets.sh` -> `../values/sealed-secrets-values.yaml`
+- `infra/scripts/install_trivy.sh` -> `../values/trivy-values.yaml`
 - `infra/scripts/deploy_argocd.sh` -> `../values/argocd-values.yaml`
 
 ## Ejecucion Recomendada
 
-Lanzar `Infra Lab (K3s -> Ingress -> Argo CD)` mediante `workflow_dispatch`.
+Lanzar `Infra Lab (K3s -> Ingress -> Cert-Manager -> Sealed-Secrets -> Trivy -> Argo CD)` mediante `workflow_dispatch`.
+
+Flujo actual: `K3s -> Ingress -> cert-manager -> Sealed Secrets -> Trivy -> Argo CD`.
 
 Este workflow ya encadena todo en orden y deja preparado el punto central (`infra-lab`) para añadir futuros despliegues/steps antes de Argo CD.
 

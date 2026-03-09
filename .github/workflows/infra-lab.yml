@@ -1,4 +1,4 @@
-name: Infra Lab (K3s -> Ingress -> Argo CD)
+name: Infra Lab (K3s -> Ingress -> Cert-Manager -> Sealed-Secrets -> Trivy -> Argo CD)
 
 on:
   workflow_dispatch:
@@ -36,6 +36,21 @@ on:
         required: false
         default: "infra/ingress-values.yaml"
         type: string
+      cert_manager_values_file:
+        description: "Ruta de values de cert-manager"
+        required: false
+        default: "infra/values/cert-manager-values.yaml"
+        type: string
+      sealed_secrets_values_file:
+        description: "Ruta de values de Sealed Secrets"
+        required: false
+        default: "infra/values/sealed-secrets-values.yaml"
+        type: string
+      trivy_values_file:
+        description: "Ruta de values de Trivy Operator"
+        required: false
+        default: "infra/values/trivy-values.yaml"
+        type: string
       argocd_namespace:
         description: "Namespace destino de Argo CD"
         required: false
@@ -69,14 +84,17 @@ jobs:
       calico_version: ${{ inputs.calico_version }}
 
   infra-lab:
-    name: 2) Infra Lab - Ingress
+    name: 2) Infra Lab - Core Services
     needs: infra-k3s
     runs-on: [self-hosted, linux]
     env:
       INGRESS_NAMESPACE: ${{ inputs.ingress_namespace || 'ingress-nginx' }}
-      RELEASE_NAME: ${{ inputs.ingress_release_name || 'ingress-nginx' }}
+      INGRESS_RELEASE_NAME: ${{ inputs.ingress_release_name || 'ingress-nginx' }}
       INGRESS_CHART_VERSION: ${{ inputs.ingress_chart_version || '4.10.1' }}
-      VALUES_FILE: ${{ github.workspace }}/${{ inputs.ingress_values_file || 'infra/ingress-values.yaml' }}
+      INGRESS_VALUES_FILE: ${{ github.workspace }}/${{ inputs.ingress_values_file || 'infra/ingress-values.yaml' }}
+      CERT_MANAGER_VALUES_FILE: ${{ github.workspace }}/${{ inputs.cert_manager_values_file || 'infra/values/cert-manager-values.yaml' }}
+      SEALED_SECRETS_VALUES_FILE: ${{ github.workspace }}/${{ inputs.sealed_secrets_values_file || 'infra/values/sealed-secrets-values.yaml' }}
+      TRIVY_VALUES_FILE: ${{ github.workspace }}/${{ inputs.trivy_values_file || 'infra/values/trivy-values.yaml' }}
       KUBECONFIG: ${{ vars.KUBECONFIG_PATH || '/etc/rancher/k3s/k3s.yaml' }}
 
     steps:
@@ -98,8 +116,19 @@ jobs:
         run: |
           set -euo pipefail
           test -f infra/scripts/deploy_ingress.sh || { echo "[ERROR] No existe infra/scripts/deploy_ingress.sh"; exit 1; }
-          test -f "$VALUES_FILE" || { echo "[ERROR] No existe values file: $VALUES_FILE"; exit 1; }
+          test -f infra/scripts/install_cert_manager.sh || { echo "[ERROR] No existe infra/scripts/install_cert_manager.sh"; exit 1; }
+          test -f infra/scripts/install_sealed_secrets.sh || { echo "[ERROR] No existe infra/scripts/install_sealed_secrets.sh"; exit 1; }
+          test -f infra/scripts/install_trivy.sh || { echo "[ERROR] No existe infra/scripts/install_trivy.sh"; exit 1; }
+
+          test -f "$INGRESS_VALUES_FILE" || { echo "[ERROR] No existe values file: $INGRESS_VALUES_FILE"; exit 1; }
+          test -f "$CERT_MANAGER_VALUES_FILE" || { echo "[ERROR] No existe values file: $CERT_MANAGER_VALUES_FILE"; exit 1; }
+          test -f "$SEALED_SECRETS_VALUES_FILE" || { echo "[ERROR] No existe values file: $SEALED_SECRETS_VALUES_FILE"; exit 1; }
+          test -f "$TRIVY_VALUES_FILE" || { echo "[ERROR] No existe values file: $TRIVY_VALUES_FILE"; exit 1; }
+
           bash -n infra/scripts/deploy_ingress.sh
+          bash -n infra/scripts/install_cert_manager.sh
+          bash -n infra/scripts/install_sealed_secrets.sh
+          bash -n infra/scripts/install_trivy.sh
 
       - name: Verificar conectividad con cluster
         run: |
@@ -111,11 +140,45 @@ jobs:
           fi
           kubectl get nodes -o wide
 
-      - name: Dar permisos al script
-        run: chmod +x infra/scripts/deploy_ingress.sh
+      - name: Dar permisos a scripts
+        run: |
+          chmod +x infra/scripts/deploy_ingress.sh
+          chmod +x infra/scripts/install_cert_manager.sh
+          chmod +x infra/scripts/install_sealed_secrets.sh
+          chmod +x infra/scripts/install_trivy.sh
 
       - name: Desplegar NGINX Ingress con Helm
-        run: ./infra/scripts/deploy_ingress.sh
+        env:
+          RELEASE_NAME: ${{ env.INGRESS_RELEASE_NAME }}
+          VALUES_FILE: ${{ env.INGRESS_VALUES_FILE }}
+        run: |
+          echo "::group::Ingress NGINX"
+          ./infra/scripts/deploy_ingress.sh
+          echo "::endgroup::"
+
+      - name: Desplegar cert-manager con Helm
+        env:
+          VALUES_FILE: ${{ env.CERT_MANAGER_VALUES_FILE }}
+        run: |
+          echo "::group::cert-manager"
+          ./infra/scripts/install_cert_manager.sh
+          echo "::endgroup::"
+
+      - name: Desplegar Sealed Secrets con Helm
+        env:
+          VALUES_FILE: ${{ env.SEALED_SECRETS_VALUES_FILE }}
+        run: |
+          echo "::group::Sealed Secrets"
+          ./infra/scripts/install_sealed_secrets.sh
+          echo "::endgroup::"
+
+      - name: Desplegar Trivy Operator con Helm
+        env:
+          VALUES_FILE: ${{ env.TRIVY_VALUES_FILE }}
+        run: |
+          echo "::group::Trivy Operator"
+          ./infra/scripts/install_trivy.sh
+          echo "::endgroup::"
 
   infra-argocd:
     name: 3) Infra Argo CD
