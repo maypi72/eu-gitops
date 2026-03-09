@@ -40,7 +40,7 @@ jobs:
     runs-on: [self-hosted, linux]
     # Ejecuta siempre en workflow_dispatch.
     # Si se invoca por workflow_call, requiere habilitar el flag de entorno/repo variable.
-    if: ${{ github.event_name == 'workflow_dispatch' || vars.ENABLE_K3S_BOOTSTRAP == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || vars.ENABLE_K3S_BOOTSTRAP == 'true' }}
     env:
       FORCE_REINSTALL: ${{ inputs.force_reinstall || 'false' }}
       CALICO_VERSION: ${{ inputs.calico_version || 'v3.27.2' }}

@@ -75,9 +75,42 @@ else
   echo "[INFO] Helm ya estaba instalado"
 fi
 
-helm version --short
+HELM_VERSION="$(helm version --short 2>/dev/null || true)"
+if ! echo "$HELM_VERSION" | grep -q '^v3\.'; then
+  echo "[WARN] Helm detectado no es v3 (${HELM_VERSION:-desconocido}). Instalando Helm v3..."
+  if [ "${EUID:-$(id -u)}" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
+    curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | sudo -n bash
+  else
+    curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+  fi
+fi
+
+HELM_VERSION="$(helm version --short 2>/dev/null || true)"
+if ! echo "$HELM_VERSION" | grep -q '^v3\.'; then
+  echo "[ERROR] No se pudo validar Helm v3. Version actual: ${HELM_VERSION:-desconocida}"
+  exit 1
+fi
+echo "[INFO] Helm version: $HELM_VERSION"
+
 helm repo add argo https://argoproj.github.io/argo-helm --force-update
 helm repo update
+
+if [ -z "$ARGOCD_CHART_VERSION" ]; then
+  ARGOCD_CHART_VERSION="$(helm search repo argo/argo-cd --versions | awk 'NR==2 {print $2}')"
+fi
+
+if [ -z "$ARGOCD_CHART_VERSION" ]; then
+  echo "[ERROR] No fue posible determinar una version del chart argo/argo-cd"
+  exit 1
+fi
+
+if helm show crds argo/argo-cd --version "$ARGOCD_CHART_VERSION" | grep -q 'apiextensions.k8s.io/v1beta1'; then
+  echo "[ERROR] El chart argo/argo-cd ${ARGOCD_CHART_VERSION} usa CRDs v1beta1 incompatibles con clusters modernos"
+  echo "[ERROR] Define ARGOCD_CHART_VERSION con una version mas reciente"
+  exit 1
+fi
+
+echo "[INFO] Chart Argo CD seleccionado: $ARGOCD_CHART_VERSION"
 gh_group_end
 
 gh_group "Argo CD"
@@ -99,13 +132,10 @@ HELM_ARGS=(
   --namespace "$ARGOCD_NAMESPACE"
   --create-namespace
   --values "$VALUES_FILE"
+  --version "$ARGOCD_CHART_VERSION"
   --wait
   --timeout "$ARGOCD_WAIT_TIMEOUT"
 )
-
-if [ -n "$ARGOCD_CHART_VERSION" ]; then
-  HELM_ARGS+=(--version "$ARGOCD_CHART_VERSION")
-fi
 
 helm "${HELM_ARGS[@]}"
 

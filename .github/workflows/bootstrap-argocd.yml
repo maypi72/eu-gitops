@@ -16,7 +16,7 @@ on:
       argocd_chart_version:
         description: "Version del chart (opcional)"
         required: false
-        default: ""
+        default: "7.8.2"
         type: string
       values_file:
         description: "Ruta al values file"
@@ -36,7 +36,7 @@ on:
       argocd_chart_version:
         required: false
         type: string
-        default: ""
+        default: "7.8.2"
       values_file:
         required: false
         type: string
@@ -53,11 +53,11 @@ jobs:
   bootstrap-argocd:
     name: Bootstrap Argo CD (self-hosted)
     runs-on: [self-hosted, linux]
-    if: ${{ github.event_name == 'workflow_dispatch' || vars.ENABLE_ARGOCD_BOOTSTRAP == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || vars.ENABLE_ARGOCD_BOOTSTRAP == 'true' }}
     env:
       ARGOCD_NAMESPACE: ${{ inputs.argocd_namespace || 'argocd' }}
       ARGOCD_RELEASE_NAME: ${{ inputs.argocd_release_name || 'argocd' }}
-      ARGOCD_CHART_VERSION: ${{ inputs.argocd_chart_version || '' }}
+      ARGOCD_CHART_VERSION: ${{ inputs.argocd_chart_version || '7.8.2' }}
       VALUES_FILE: ${{ github.workspace }}/${{ inputs.values_file || 'bootstrap/values/argocd-values.yaml' }}
       # Si no se define, el script intenta /etc/rancher/k3s/k3s.yaml
       KUBECONFIG: ${{ vars.KUBECONFIG_PATH || '' }}
