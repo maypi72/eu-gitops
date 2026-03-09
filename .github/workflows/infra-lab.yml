@@ -97,9 +97,9 @@ jobs:
       - name: Verificar ficheros requeridos
         run: |
           set -euo pipefail
-          test -f infra/deploy_ingress.sh || { echo "[ERROR] No existe infra/deploy_ingress.sh"; exit 1; }
+          test -f infra/scripts/deploy_ingress.sh || { echo "[ERROR] No existe infra/scripts/deploy_ingress.sh"; exit 1; }
           test -f "$VALUES_FILE" || { echo "[ERROR] No existe values file: $VALUES_FILE"; exit 1; }
-          bash -n infra/deploy_ingress.sh
+          bash -n infra/scripts/deploy_ingress.sh
 
       - name: Verificar conectividad con cluster
         run: |
@@ -112,10 +112,10 @@ jobs:
           kubectl get nodes -o wide
 
       - name: Dar permisos al script
-        run: chmod +x infra/deploy_ingress.sh
+        run: chmod +x infra/scripts/deploy_ingress.sh
 
       - name: Desplegar NGINX Ingress con Helm
-        run: ./infra/deploy_ingress.sh
+        run: ./infra/scripts/deploy_ingress.sh
 
   infra-argocd:
     name: 3) Infra Argo CD

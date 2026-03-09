@@ -29,7 +29,7 @@ run_privileged() {
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VALUES_FILE="${VALUES_FILE:-${SCRIPT_DIR}/values/argocd-values.yaml}"
+VALUES_FILE="${VALUES_FILE:-${SCRIPT_DIR}/../values/argocd-values.yaml}"
 ARGOCD_NAMESPACE="${ARGOCD_NAMESPACE:-argocd}"
 ARGOCD_RELEASE_NAME="${ARGOCD_RELEASE_NAME:-argocd}"
 ARGOCD_WAIT_TIMEOUT="${ARGOCD_WAIT_TIMEOUT:-10m}"

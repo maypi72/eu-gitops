@@ -9,7 +9,7 @@ echo "[INFO] === K3s Lab: Instalación NGINX Ingress (Calico Compatible) ==="
 # Calculamos la ruta base del script para localizar el archivo de values.
 # Prioridad: ruta relativa al script y fallback a GITHUB_WORKSPACE.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VALUES_FILE="$SCRIPT_DIR/ingress-values.yaml"
+VALUES_FILE="$SCRIPT_DIR/../ingress-values.yaml"
 if [ ! -f "$VALUES_FILE" ] && [ -n "${GITHUB_WORKSPACE:-}" ]; then
     VALUES_FILE="$GITHUB_WORKSPACE/infra/ingress-values.yaml"
 fi

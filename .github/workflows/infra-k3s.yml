@@ -58,7 +58,7 @@ jobs:
           echo "ENABLE_K3S_INFRA=${{ vars.ENABLE_K3S_INFRA || 'unset' }}"
 
       - name: Dar permisos al script
-        run: chmod +x infra/install_k3s.sh
+        run: chmod +x infra/scripts/install_k3s.sh
 
       - name: Ejecutar despliegue de K3s
-        run: ./infra/install_k3s.sh
+        run: ./infra/scripts/install_k3s.sh
