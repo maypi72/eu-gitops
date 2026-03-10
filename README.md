@@ -17,6 +17,13 @@ Repositorio GitOps para laboratorio K3s con despliegue de infraestructura base e
 │       └── listmonk-pro.yaml
 └── infra/
 	├── apps-root.yaml
+	├── charts/
+	│   └── listmonk/
+	│       ├── Chart.yaml
+	│       ├── values.yaml
+	│       ├── values-dev.yaml
+	│       ├── values-pro.yaml
+	│       └── templates/
 	├── ingress-values.yaml
 	├── values/
 	│   ├── argocd-values.yaml
@@ -57,6 +64,8 @@ Repositorio GitOps para laboratorio K3s con despliegue de infraestructura base e
 	- `apps/listmonk/argo-rollouts.yaml`
 	- `apps/listmonk/listmonk-dev.yaml`
 	- `apps/listmonk/listmonk-pro.yaml`
+- Helm Charts:
+	- `infra/charts/listmonk`
 - Values:
 	- `infra/ingress-values.yaml`
 	- `infra/values/argocd-values.yaml`
