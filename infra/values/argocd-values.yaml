@@ -16,9 +16,24 @@ redis:
 
 controller:
   replicas: 1
+  parallelismLimit: 3
+  resources:
+    requests:
+      cpu: 150m
+      memory: 250Mi
+    limits:
+      cpu: 500m
+      memory: 760Mi
 
 server:
   replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
   service:
     type: ClusterIP
   ingress:
@@ -32,6 +47,13 @@ server:
 
 repoServer:
   replicas: 1
+  resources:
+    requests:
+      cpu: 150m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
 applicationSet:
   replicas: 1
