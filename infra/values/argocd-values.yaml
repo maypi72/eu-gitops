@@ -20,7 +20,15 @@ controller:
 server:
   replicas: 1
   service:
-    type: NodePort
+    type: ClusterIP
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - argocd.local
+    paths:
+      - /
+    pathType: Prefix
 
 repoServer:
   replicas: 1
