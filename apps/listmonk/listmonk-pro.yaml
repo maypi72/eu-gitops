@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: listmonk-pro
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/maypi72/eu-gitops.git
+    targetRevision: main
+    path: infra/scripts/charts/listmonk
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-pro.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: listmonk-pro
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

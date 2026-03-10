@@ -1,0 +1,32 @@
+image:
+  repository: ghcr.io/maypi72/eu-app-listmonk
+  tag: stable
+
+replicaCount: 2
+
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+
+ingress:
+  host: listmonk-pro.local
+  tls:
+    secretName: listmonk-pro-tls
+
+service:
+  activeName: listmonk-pro-active
+  previewName: listmonk-pro-preview
+
+rollout:
+  strategy:
+    autoPromotionEnabled: true
+    autoPromotionSeconds: 60
+
+postgresql:
+  primary:
+    persistence:
+      size: 5Gi

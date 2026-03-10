@@ -1,0 +1,23 @@
+image:
+  repository: ghcr.io/maypi72/eu-app-listmonk
+  tag: dev
+
+replicaCount: 1
+
+ingress:
+  host: listmonk-dev.local
+  tls:
+    secretName: listmonk-dev-tls
+
+service:
+  activeName: listmonk-dev-active
+  previewName: listmonk-dev-preview
+
+rollout:
+  strategy:
+    autoPromotionEnabled: false
+
+postgresql:
+  primary:
+    persistence:
+      size: 2Gi

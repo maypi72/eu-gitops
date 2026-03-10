@@ -11,6 +11,10 @@ Repositorio GitOps para laboratorio K3s con despliegue de infraestructura base e
 │   ├── infra-lab.yml
 │   └── infra-argocd.yml
 ├── apps/
+│   └── listmonk/
+│       ├── argo-rollouts.yaml
+│       ├── listmonk-dev.yaml
+│       └── listmonk-pro.yaml
 └── infra/
 	├── apps-root.yaml
 	├── ingress-values.yaml
@@ -49,6 +53,10 @@ Repositorio GitOps para laboratorio K3s con despliegue de infraestructura base e
 	- `infra/scripts/install_sealed_secrets.sh`
 	- `infra/scripts/install_trivy.sh`
 	- `infra/scripts/deploy_argocd.sh`
+- ArgoCD Apps:
+	- `apps/listmonk/argo-rollouts.yaml`
+	- `apps/listmonk/listmonk-dev.yaml`
+	- `apps/listmonk/listmonk-pro.yaml`
 - Values:
 	- `infra/ingress-values.yaml`
 	- `infra/values/argocd-values.yaml`

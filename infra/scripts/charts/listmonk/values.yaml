@@ -1,0 +1,80 @@
+image:
+  repository: ghcr.io/maypi72/eu-app-listmonk
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+resources:
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+
+env: {}
+  # LISTMONK_DEBUG: "false"
+
+secrets:
+  appSecretName: ""
+
+service:
+  type: ClusterIP
+  port: 9000
+  activeName: listmonk-active
+  previewName: listmonk-preview
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  host: listmonk.local
+  tls:
+    enabled: true
+    secretName: listmonk-tls
+
+certManager:
+  enabled: true
+  issuerName: listmonk-selfsigned
+  issuerKind: Issuer
+  issuerGroup: cert-manager.io
+
+rollout:
+  enabled: true
+  strategy:
+    autoPromotionEnabled: false
+    autoPromotionSeconds: 0
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+postgresql:
+  enabled: true
+  auth:
+    username: listmonk
+    password: listmonk
+    database: listmonk
+  primary:
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5

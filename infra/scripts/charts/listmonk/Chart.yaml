@@ -1,0 +1,12 @@
+apiVersion: v2
+name: listmonk
+description: Helm chart to deploy listmonk with Argo Rollouts blue/green strategy.
+type: application
+version: 0.2.0
+appVersion: "latest"
+
+dependencies:
+  - name: postgresql
+    version: 15.5.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
